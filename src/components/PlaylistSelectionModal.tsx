@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Folder, Search, Check } from 'lucide-react';
 import type { PlaylistMetadata, VideoInPlaylist } from '../store/playlistStore';
 import { isAudioPlatform } from '../utils/platform-utils';
@@ -17,9 +17,21 @@ export function PlaylistSelectionModal({ playlist, onConfirm, onCancel }: Playli
 
     // Default paths/settings
     const sanitizeFolderName = (name: string) => name.replace(/[<>:"/\\|?*]/g, '-').trim();
-    const defaultDir = `/Users/jeff/Downloads/${sanitizeFolderName(playlist.title)}`;
 
-    const [outputDir, setOutputDir] = useState<string>(defaultDir);
+    const [outputDir, setOutputDir] = useState<string>('');
+
+    useEffect(() => {
+        const fetchDownloadsFolder = async () => {
+            if (window.api) {
+                const baseDir = await window.api.getDownloadsFolder();
+                // We don't have path.join in frontend, but for UI display simple slash is fine
+                // The actual backend will use path.join when downloading
+                setOutputDir(`${baseDir}/${sanitizeFolderName(playlist.title)}`);
+            }
+        };
+        fetchDownloadsFolder();
+    }, [playlist.title]);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [format, setFormat] = useState<'video' | 'audio'>(isAudioPlatform(playlist.url) ? 'audio' : 'video');
     const [resolution, setResolution] = useState<string>('1080p');
@@ -45,6 +57,10 @@ export function PlaylistSelectionModal({ playlist, onConfirm, onCancel }: Playli
     const handleDeselectAll = () => setSelectedIds(new Set());
 
     const handleSelectFolder = async () => {
+        if (!window.api) {
+            console.error('Electron API not available');
+            return;
+        }
         const folder = await window.api.selectDirectory();
         if (folder) setOutputDir(folder);
     };

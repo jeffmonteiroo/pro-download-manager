@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { cookieManager } from './services/cookie-manager';
+import { binaryManager } from './services/binary-manager';
 
 export interface VideoMetadata {
     title: string;
@@ -16,18 +17,15 @@ export interface VideoMetadata {
 
 export class VideoAnalyzerService {
     async analyze(url: string): Promise<VideoMetadata> {
-        // Check if we should use cookies based on cache
-        const useCookies = cookieManager.shouldUseCookies(url);
+        // We DISABLED automatic cookie usage during analysis to avoid macOS Keychain prompts.
+        // Analysis will try WITHOUT cookies first.
+        const useCookies = false; 
 
         try {
             return await this.runAnalysis(url, useCookies);
         } catch (error: any) {
-            // Fallback: If bot error and wasn't using cookies, retry with cookies
-            if (cookieManager.isBotError(error) && !useCookies) {
-                cookieManager.recordBlock();
-                console.log('[Analyzer] Bot detected, retrying with cookies...');
-                return await this.runAnalysis(url, true);
-            }
+            // If it fails with a bot error, we don't retry automatically with cookies.
+            // Instead, we let the UI handle the error and ask the user to login if they want.
             throw error;
         }
     }
@@ -38,12 +36,20 @@ export class VideoAnalyzerService {
 
             const args = ['--dump-single-json', '--no-playlist', url];
 
+            // Add Scaleup specific headers if needed
+            if (url.includes('scaleup.com.br')) {
+                args.push('--referer', 'https://stream.scaleup.com.br/');
+                args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+                args.push('--add-header', 'Origin:https://stream.scaleup.com.br');
+            }
+
             if (useCookies) {
                 const browser = cookieManager.getBrowser();
                 args.push('--cookies-from-browser', browser);
             }
 
-            const proc = spawn('yt-dlp', args);
+            const ytDlpPath = binaryManager.getBinaryPath('yt-dlp');
+            const proc = spawn(ytDlpPath, args);
             let stdout = '';
             let stderr = '';
 

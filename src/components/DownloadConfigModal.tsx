@@ -39,7 +39,17 @@ export function DownloadConfigModal({ isOpen, onClose, onDownload, metadata, ini
     const isAudioOnly = isAudioPlatform(initialUrl);
     const [selectedFormat, setSelectedFormat] = useState<'video' | 'audio'>(isAudioOnly ? 'audio' : 'video');
     const [selectedResolution, setSelectedResolution] = useState<string>('');
-    const [outputDir, setOutputDir] = useState('/Users/jeff/Downloads');
+    const [outputDir, setOutputDir] = useState('');
+
+    useEffect(() => {
+        const fetchDownloadsFolder = async () => {
+            if (window.api) {
+                const folder = await window.api.getDownloadsFolder();
+                setOutputDir(folder);
+            }
+        };
+        fetchDownloadsFolder();
+    }, []);
 
     const availableResolutions = metadata ? Array.from(new Set(metadata.formats.map(f => f.resolution)))
         .filter(r => r !== 'audio')
@@ -67,6 +77,10 @@ export function DownloadConfigModal({ isOpen, onClose, onDownload, metadata, ini
 
     const handleSelectDir = async () => {
         try {
+            if (!window.api) {
+                console.error('Electron API not available');
+                return;
+            }
             const selected = await window.api.selectDirectory();
             if (selected) setOutputDir(selected);
         } catch (e) {

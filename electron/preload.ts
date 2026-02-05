@@ -40,10 +40,15 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.removeAllListeners(channel)
   },
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  getDownloadsFolder: () => ipcRenderer.invoke('get-downloads-folder'),
   pauseDownload: (id: string) => ipcRenderer.send('pause-download', id),
   resumeDownload: (id: string) => ipcRenderer.send('resume-download', id),
   cancelDownload: (id: string) => ipcRenderer.send('cancel-download', id),
   cancelPlaylist: (id: string) => ipcRenderer.send('cancel-playlist', id),
+  openFolder: (path: string) => ipcRenderer.send('open-folder', path),
   analyzeUrl: (url: string) => ipcRenderer.invoke('analyze-url', url),
   analyzePlaylist: (url: string) => ipcRenderer.invoke('analyze-playlist', url),
+  openYouTubeLogin: () => ipcRenderer.send('open-youtube-login'),
+  enableCookies: () => ipcRenderer.send('enable-cookies'),
+  resetCookies: () => ipcRenderer.send('reset-cookies'),
 })

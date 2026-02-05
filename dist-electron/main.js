@@ -10,8 +10,8 @@ var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 var _validator, _encryptionKey, _options, _defaultValues, _isInMigration, _watcher, _watchFile, _debouncedChangeHandler, _Conf_instances, prepareOptions_fn, setupValidator_fn, captureSchemaDefaults_fn, applyDefaultValues_fn, configureSerialization_fn, resolvePath_fn, initializeStore_fn, runMigrations_fn;
-import electron, { app as app$1, ipcMain as ipcMain$1, dialog, Notification, BrowserWindow } from "electron";
-import { spawn } from "node:child_process";
+import electron, { app as app$1, ipcMain as ipcMain$1, dialog, Notification, BrowserWindow, shell as shell$1 } from "electron";
+import { execSync, spawn } from "node:child_process";
 import path from "node:path";
 import process$1 from "node:process";
 import { promisify, isDeepStrictEqual } from "node:util";
@@ -22,8 +22,8 @@ import os from "node:os";
 import { EventEmitter } from "node:events";
 import "node:stream";
 import { createInterface } from "node:readline";
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 const isObject = (value) => {
   const type2 = typeof value;
   return value !== null && (type2 === "object" || type2 === "function");
@@ -506,7 +506,7 @@ if (!IS_WINDOWS) {
 if (IS_LINUX) {
   Signals.push("SIGIO", "SIGPOLL", "SIGPWR", "SIGSTKFLT");
 }
-class Interceptor {
+let Interceptor$1 = class Interceptor {
   /* CONSTRUCTOR */
   constructor() {
     this.callbacks = /* @__PURE__ */ new Set();
@@ -543,9 +543,9 @@ class Interceptor {
     };
     this.hook();
   }
-}
-const Interceptor$1 = new Interceptor();
-const whenExit = Interceptor$1.register;
+};
+const Interceptor2 = new Interceptor$1();
+const whenExit = Interceptor2.register;
 const Temp = {
   /* VARIABLES */
   store: {},
@@ -3025,9 +3025,9 @@ function commentKeyword$1({ gen, schemaEnv, schema, errSchemaPath, opts }) {
   }
 }
 function returnResults$1(it) {
-  const { gen, schemaEnv, validateName, ValidationError: ValidationError2, opts } = it;
+  const { gen, schemaEnv, validateName, ValidationError: ValidationError3, opts } = it;
   if (schemaEnv.$async) {
-    gen.if((0, codegen_1$X._)`${names_1$d.default.errors} === 0`, () => gen.return(names_1$d.default.data), () => gen.throw((0, codegen_1$X._)`new ${ValidationError2}(${names_1$d.default.vErrors})`));
+    gen.if((0, codegen_1$X._)`${names_1$d.default.errors} === 0`, () => gen.return(names_1$d.default.data), () => gen.throw((0, codegen_1$X._)`new ${ValidationError3}(${names_1$d.default.vErrors})`));
   } else {
     gen.assign((0, codegen_1$X._)`${validateName}.errors`, names_1$d.default.vErrors);
     if (opts.unevaluated)
@@ -9893,9 +9893,9 @@ function commentKeyword({ gen, schemaEnv, schema, errSchemaPath, opts }) {
   }
 }
 function returnResults(it) {
-  const { gen, schemaEnv, validateName, ValidationError: ValidationError2, opts } = it;
+  const { gen, schemaEnv, validateName, ValidationError: ValidationError3, opts } = it;
   if (schemaEnv.$async) {
-    gen.if((0, codegen_1$n._)`${names_1$3.default.errors} === 0`, () => gen.return(names_1$3.default.data), () => gen.throw((0, codegen_1$n._)`new ${ValidationError2}(${names_1$3.default.vErrors})`));
+    gen.if((0, codegen_1$n._)`${names_1$3.default.errors} === 0`, () => gen.return(names_1$3.default.data), () => gen.throw((0, codegen_1$n._)`new ${ValidationError3}(${names_1$3.default.vErrors})`));
   } else {
     gen.assign((0, codegen_1$n._)`${validateName}.errors`, names_1$3.default.vErrors);
     if (opts.unevaluated)
@@ -10239,21 +10239,15 @@ function getData($data, { dataLevel, dataNames, dataPathArr }) {
 }
 validate.getData = getData;
 var validation_error = {};
-var hasRequiredValidation_error;
-function requireValidation_error() {
-  if (hasRequiredValidation_error) return validation_error;
-  hasRequiredValidation_error = 1;
-  Object.defineProperty(validation_error, "__esModule", { value: true });
-  class ValidationError2 extends Error {
-    constructor(errors2) {
-      super("validation failed");
-      this.errors = errors2;
-      this.ajv = this.validation = true;
-    }
+Object.defineProperty(validation_error, "__esModule", { value: true });
+class ValidationError2 extends Error {
+  constructor(errors2) {
+    super("validation failed");
+    this.errors = errors2;
+    this.ajv = this.validation = true;
   }
-  validation_error.default = ValidationError2;
-  return validation_error;
 }
+validation_error.default = ValidationError2;
 var ref_error = {};
 Object.defineProperty(ref_error, "__esModule", { value: true });
 const resolve_1$1 = resolve$1;
@@ -10269,7 +10263,7 @@ var compile = {};
 Object.defineProperty(compile, "__esModule", { value: true });
 compile.resolveSchema = compile.getCompilingSchema = compile.resolveRef = compile.compileSchema = compile.SchemaEnv = void 0;
 const codegen_1$m = codegen;
-const validation_error_1 = requireValidation_error();
+const validation_error_1 = validation_error;
 const names_1$2 = names$1;
 const resolve_1 = resolve$1;
 const util_1$k = util;
@@ -10542,7 +10536,7 @@ uri$1.default = uri;
   Object.defineProperty(exports$1, "CodeGen", { enumerable: true, get: function() {
     return codegen_12.CodeGen;
   } });
-  const validation_error_12 = requireValidation_error();
+  const validation_error_12 = validation_error;
   const ref_error_12 = ref_error;
   const rules_12 = rules;
   const compile_12 = compile;
@@ -12995,7 +12989,7 @@ const require$$3 = {
   Object.defineProperty(exports$1, "CodeGen", { enumerable: true, get: function() {
     return codegen_12.CodeGen;
   } });
-  var validation_error_12 = requireValidation_error();
+  var validation_error_12 = validation_error;
   Object.defineProperty(exports$1, "ValidationError", { enumerable: true, get: function() {
     return validation_error_12.default;
   } });
@@ -14800,7 +14794,7 @@ const ltr = ltr_1;
 const intersects = intersects_1;
 const simplifyRange = simplify;
 const subset = subset_1;
-var semver = {
+var semver$1 = {
   parse,
   valid,
   clean,
@@ -14847,7 +14841,7 @@ var semver = {
   compareIdentifiers: identifiers.compareIdentifiers,
   rcompareIdentifiers: identifiers.rcompareIdentifiers
 };
-const semver$1 = /* @__PURE__ */ getDefaultExportFromCjs(semver);
+const semver = /* @__PURE__ */ getDefaultExportFromCjs(semver$1);
 const objectToString = Object.prototype.toString;
 const uint8ArrayStringified = "[object Uint8Array]";
 const arrayBufferStringified = "[object ArrayBuffer]";
@@ -15311,7 +15305,7 @@ class Conf {
         throw new Error(`Something went wrong during the migration! Changes applied to the store until this failed migration will be restored. ${errorMessage}`);
       }
     }
-    if (this._isVersionInRangeFormat(previousMigratedVersion) || !semver$1.eq(previousMigratedVersion, versionToMigrate)) {
+    if (this._isVersionInRangeFormat(previousMigratedVersion) || !semver.eq(previousMigratedVersion, versionToMigrate)) {
       this._set(MIGRATION_KEY, versionToMigrate);
     }
   }
@@ -15342,19 +15336,19 @@ class Conf {
     return candidate === INTERNAL_KEY || candidate.startsWith(`${INTERNAL_KEY}.`);
   }
   _isVersionInRangeFormat(version) {
-    return semver$1.clean(version) === null;
+    return semver.clean(version) === null;
   }
   _shouldPerformMigration(candidateVersion, previousMigratedVersion, versionToMigrate) {
     if (this._isVersionInRangeFormat(candidateVersion)) {
-      if (previousMigratedVersion !== "0.0.0" && semver$1.satisfies(previousMigratedVersion, candidateVersion)) {
+      if (previousMigratedVersion !== "0.0.0" && semver.satisfies(previousMigratedVersion, candidateVersion)) {
         return false;
       }
-      return semver$1.satisfies(versionToMigrate, candidateVersion);
+      return semver.satisfies(versionToMigrate, candidateVersion);
     }
-    if (semver$1.lte(candidateVersion, previousMigratedVersion)) {
+    if (semver.lte(candidateVersion, previousMigratedVersion)) {
       return false;
     }
-    if (semver$1.gt(candidateVersion, versionToMigrate)) {
+    if (semver.gt(candidateVersion, versionToMigrate)) {
       return false;
     }
     return true;
@@ -15550,7 +15544,9 @@ class ElectronStore extends Conf {
 const store$2 = new ElectronStore({
   defaults: {
     youtube_last_blocked: null,
-    cookie_browser: "chrome"
+    cookie_browser: "chrome",
+    session_cookies_enabled: false
+    // Start with cookies disabled
   }
 });
 class CookieManager {
@@ -15559,46 +15555,50 @@ class CookieManager {
   }
   // 1 hour
   /**
-   * Record that YouTube blocked us
+   * Record that YouTube blocked us - NOW only for this session
    */
   recordBlock() {
     const now = Date.now();
     store$2.set("youtube_last_blocked", now);
-    console.log("[CookieManager] YouTube block recorded, will use cookies for next hour");
+    store$2.set("session_cookies_enabled", true);
+    console.log("[CookieManager] YouTube block recorded, cookies enabled for this session");
   }
   /**
-   * Check if we should use cookies for this URL
+   * Check if we should use cookies for this URL - ONLY if session is enabled
    */
   shouldUseCookies(url) {
-    if (!this.isYouTube(url)) {
+    if (!this.isYouTube(url)) return false;
+    if (!store$2.get("session_cookies_enabled")) {
       return false;
     }
-    const lastBlocked = store$2.get("youtube_last_blocked");
-    if (!lastBlocked) {
-      return false;
-    }
-    const elapsed = Date.now() - lastBlocked;
-    if (elapsed < this.BLOCK_MEMORY_DURATION) {
-      const minutesAgo = Math.floor(elapsed / 6e4);
-      console.log(`[CookieManager] Using cookies preventively (blocked ${minutesAgo}min ago)`);
-      return true;
-    }
-    console.log("[CookieManager] Block memory expired, trying without cookies");
-    this.resetMemory();
-    return false;
+    const status = this.getStatus();
+    return status.blocked;
+  }
+  /**
+   * Clear session cookies when app closes
+   */
+  clearSessionCookies() {
+    store$2.set("session_cookies_enabled", false);
+    store$2.set("youtube_last_blocked", null);
+    console.log("[CookieManager] Session cookies cleared");
   }
   /**
    * Reset the block memory (manual or automatic)
    */
   resetMemory() {
     store$2.set("youtube_last_blocked", null);
-    console.log("[CookieManager] Block memory reset");
+    store$2.set("session_cookies_enabled", false);
+    console.log("[CookieManager] Block memory and session cookies reset");
   }
   /**
    * Get preferred browser for cookies
    */
   getBrowser() {
-    return store$2.get("cookie_browser");
+    const browser = store$2.get("cookie_browser");
+    if (browser === "safari" && process.platform !== "darwin") {
+      return "chrome";
+    }
+    return browser;
   }
   /**
    * Set preferred browser for cookies
@@ -15725,6 +15725,82 @@ class LogManager {
   }
 }
 const logManager = new LogManager();
+const __dirname$2 = path.dirname(fileURLToPath(import.meta.url));
+class BinaryManager {
+  constructor() {
+    __publicField(this, "isWindows", process.platform === "win32");
+  }
+  /**
+   * Get the path to a binary (yt-dlp or ffmpeg)
+   */
+  getBinaryPath(name) {
+    const binaryName = this.isWindows ? `${name}.exe` : name;
+    const bundledPath = this.getBundledPath(binaryName);
+    if (bundledPath && fs.existsSync(bundledPath)) {
+      if (process.platform !== "win32") {
+        try {
+          fs.chmodSync(bundledPath, 493);
+        } catch (e) {
+          console.warn(`[BinaryManager] Failed to set permissions for ${bundledPath}`);
+        }
+      }
+      return bundledPath;
+    }
+    try {
+      const command = this.isWindows ? "where" : "which";
+      const result = execSync(`${command} ${name}`, { encoding: "utf8" }).trim().split("\n")[0];
+      if (result && fs.existsSync(result)) {
+        return result;
+      }
+    } catch (e) {
+    }
+    return name;
+  }
+  /**
+   * Get the path where the binary should be bundled
+   */
+  getBundledPath(binaryName) {
+    if (app$1.isPackaged) {
+      return path.join(process.resourcesPath, "bin", binaryName);
+    } else {
+      const pathsToTry = [
+        path.join(process.cwd(), "bin", binaryName),
+        path.join(process.cwd(), "..", "bin", binaryName),
+        path.join(__dirname$2, "..", "..", "bin", binaryName)
+        // Relative to this file (electron/services/binary-manager.ts -> pro-download-manager/bin -> pro-download-manager/../bin)
+      ];
+      for (const p of pathsToTry) {
+        if (fs.existsSync(p)) {
+          return p;
+        }
+      }
+      return path.join(process.cwd(), "bin", binaryName);
+    }
+  }
+  /**
+   * Check if necessary binaries are available
+   */
+  async validateBinaries() {
+    const ytDlpPath = this.getBinaryPath("yt-dlp");
+    const ffmpegPath = this.getBinaryPath("ffmpeg");
+    const ytDlpExists = ytDlpPath !== "yt-dlp" || this.checkInPath("yt-dlp");
+    const ffmpegExists = ffmpegPath !== "ffmpeg" || this.checkInPath("ffmpeg");
+    return {
+      ytDlp: ytDlpExists,
+      ffmpeg: ffmpegExists
+    };
+  }
+  checkInPath(name) {
+    try {
+      const command = this.isWindows ? "where" : "which";
+      execSync(`${command} ${name}`, { stdio: "ignore" });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+}
+const binaryManager = new BinaryManager();
 const store$1 = new ElectronStore({
   defaults: {
     downloads: []
@@ -15802,8 +15878,12 @@ class DownloadEngine extends EventEmitter {
     this.processQueue();
   }
   downloadWithFFmpeg(task) {
-    const outputPath = path.join(task.outputDir, `${task.filename}.mp4`);
-    const args = [
+    const outputPath = path.normalize(path.join(task.outputDir, `${task.filename}.mp4`));
+    const args = [];
+    if (task.url.includes("scaleup.com.br")) {
+      args.push("-headers", "Referer: https://stream.scaleup.com.br/\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n");
+    }
+    args.push(
       "-i",
       task.url,
       "-c",
@@ -15812,9 +15892,10 @@ class DownloadEngine extends EventEmitter {
       "aac_adtstoasc",
       "-y",
       outputPath
-    ];
+    );
     console.log(`[FFmpeg] Starting: ${task.url}`);
-    const proc = spawn("ffmpeg", args);
+    const ffmpegPath = binaryManager.getBinaryPath("ffmpeg");
+    const proc = spawn(ffmpegPath, args);
     this.activeDownloads.set(task.id, proc);
     let duration = null;
     proc.stderr.on("data", (data) => {
@@ -15841,8 +15922,8 @@ class DownloadEngine extends EventEmitter {
     this.handleProcessExit(task, proc, outputPath);
   }
   downloadWithYtDlp(task) {
-    const outputPathHeader = path.join(task.outputDir, `${task.filename}.%(ext)s`);
-    const debugLogPath = logManager.getLogPath(task.id);
+    const outputPathHeader = path.normalize(path.join(task.outputDir, `${task.filename}.%(ext)s`));
+    const debugLogPath = path.normalize(logManager.getLogPath(task.id));
     console.log(`[ENGINE] Log path for task ${task.id}: ${debugLogPath}`);
     const args = [
       task.url,
@@ -15851,6 +15932,11 @@ class DownloadEngine extends EventEmitter {
       "--newline",
       "--no-playlist"
     ];
+    if (task.url.includes("scaleup.com.br")) {
+      args.push("--referer", "https://stream.scaleup.com.br/");
+      args.push("--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+      args.push("--add-header", "Origin:https://stream.scaleup.com.br");
+    }
     if (cookieManager.shouldUseCookies(task.url)) {
       const browser = cookieManager.getBrowser();
       args.push("--cookies-from-browser", browser);
@@ -15870,15 +15956,30 @@ class DownloadEngine extends EventEmitter {
       }
       args.push("--merge-output-format", "mp4");
     }
+    if (task.url.includes("youtube.com") || task.url.includes("youtu.be")) {
+      args.push("--extractor-args", "youtube:player_client=web,mweb,tv,ios;player_skip=configs,web_safari");
+      args.push("--remote-components", "ejs:github");
+    }
     console.log(`[yt-dlp] Starting: ${task.url}`);
-    fs.writeFileSync(debugLogPath, `Command: yt-dlp ${args.join(" ")}
+    const ytDlpPath = binaryManager.getBinaryPath("yt-dlp");
+    fs.writeFileSync(debugLogPath, `Command: ${ytDlpPath} ${args.join(" ")}
 
 `);
-    const proc = spawn("yt-dlp", args);
+    const proc = spawn(ytDlpPath, args);
     this.activeDownloads.set(task.id, proc);
     proc.stderr.on("data", (data) => {
       const s = data.toString();
       fs.appendFileSync(debugLogPath, `[STDERR] ${s}`);
+      if (s.toLowerCase().includes("http error 403") || s.toLowerCase().includes("sign in")) {
+        if (task.url.includes("youtube.com") || task.url.includes("youtu.be")) {
+          console.log(`[ENGINE] YouTube block detected for task ${task.id}, recording in CookieManager`);
+          cookieManager.recordBlock();
+          new Notification({
+            title: "YouTube Bloqueou o Download",
+            body: 'O YouTube exige login ou verificação de bot. Clique em "Login" no card de download.'
+          }).show();
+        }
+      }
       if (s.includes("frame=") || s.includes("time=")) {
         this.updateTaskProgress(task.id, "Converting", void 0, void 0, void 0, "converting");
       }
@@ -15893,6 +15994,13 @@ class DownloadEngine extends EventEmitter {
       if (!line.trim()) return;
       fs.appendFileSync(debugLogPath, `[STDOUT] ${line}
 `);
+      const s = line.toLowerCase();
+      if (s.includes("http error 403") || s.includes("sign in") || s.includes("js challenges")) {
+        if (task.url.includes("youtube.com") || task.url.includes("youtu.be")) {
+          console.log(`[ENGINE] YouTube block/challenge detected in stdout for task ${task.id}, recording in CookieManager`);
+          cookieManager.recordBlock();
+        }
+      }
       if (line.includes("[ffmpeg]") || line.includes("[Merger]")) {
         console.log(`[DEBUG ${task.id}] CONVERSION detected`);
         this.updateTaskProgress(task.id, "100", void 0, "Processing...", void 0, "converting");
@@ -15956,20 +16064,38 @@ class DownloadEngine extends EventEmitter {
         this.win.webContents.send("download-complete", { id: task.id, path: finalPath });
         this.emit("download-complete", { id: task.id, path: finalPath });
         new Notification({
-          title: "Download Completed",
-          body: `${task.filename} has finished downloading.`
+          title: "Download Concluído",
+          body: `${task.filename} foi baixado com sucesso.`
         }).show();
       } else {
         task.status = "error";
-        const errorDetails = getErrorLog ? getErrorLog() : "";
-        const shortError = errorDetails.split("\n").slice(-3).join(" ") || `Code ${code2}`;
-        console.error(`Download failed [${task.id}]:`, errorDetails);
-        this.win.webContents.send("download-error", { id: task.id, error: shortError });
-        this.emit("download-error", { id: task.id, error: shortError });
-        new Notification({
-          title: "Download Failed",
-          body: `Error downloading ${task.filename}. Check app for details.`
-        }).show();
+        const errorLog = getErrorLog ? getErrorLog() : "";
+        let userFriendlyError = "O download falhou devido a um erro técnico inesperado.";
+        const lowerError = errorLog.toLowerCase();
+        const isYouTube = task.url.includes("youtube.com") || task.url.includes("youtu.be");
+        if (lowerError.includes("403") || lowerError.includes("forbidden") || lowerError.includes("sign in") || lowerError.includes("login") || lowerError.includes("confirm your age")) {
+          userFriendlyError = "ACESSO NEGADO: O YouTube exige login ou cookies para este vídeo.";
+        } else if (lowerError.includes("format is not available") || lowerError.includes("only images are available")) {
+          userFriendlyError = "RESTRIÇÃO DE CONTA: O YouTube bloqueou o download com seus cookies. Tente SEM cookies.";
+          cookieManager.resetMemory();
+        } else if (lowerError.includes("n challenge") || lowerError.includes("js challenge") || lowerError.includes("captcha") || lowerError.includes("robot")) {
+          userFriendlyError = "VERIFICAÇÃO: Detecção de robô (Captcha) no YouTube.";
+        } else if (isYouTube) {
+          userFriendlyError = "ERRO NO YOUTUBE: Falha ao acessar o conteúdo.";
+        } else if (lowerError.includes("format is not available")) {
+          userFriendlyError = "INDISPONÍVEL: Formato não disponível.";
+        } else if (lowerError.includes("no such file") || lowerError.includes("permission denied")) {
+          userFriendlyError = "ERRO DE ARQUIVO: Sem permissão para salvar.";
+        } else if (lowerError.includes("not found") || lowerError.includes("404")) {
+          userFriendlyError = "NÃO ENCONTRADO: Link inválido ou removido.";
+        }
+        task.error = userFriendlyError;
+        this.win.webContents.send("download-error", {
+          id: task.id,
+          error: userFriendlyError,
+          details: errorLog
+        });
+        this.emit("download-error", { id: task.id, error: userFriendlyError });
       }
       this.saveToStore();
       this.processQueue();
@@ -16054,15 +16180,10 @@ class DownloadEngine extends EventEmitter {
 }
 class VideoAnalyzerService {
   async analyze(url) {
-    const useCookies = cookieManager.shouldUseCookies(url);
+    const useCookies = false;
     try {
       return await this.runAnalysis(url, useCookies);
     } catch (error2) {
-      if (cookieManager.isBotError(error2) && !useCookies) {
-        cookieManager.recordBlock();
-        console.log("[Analyzer] Bot detected, retrying with cookies...");
-        return await this.runAnalysis(url, true);
-      }
       throw error2;
     }
   }
@@ -16070,11 +16191,17 @@ class VideoAnalyzerService {
     return new Promise((resolve2, reject) => {
       console.log(`[Analyzer] Probing: ${url}${useCookies ? " (with cookies)" : ""}`);
       const args = ["--dump-single-json", "--no-playlist", url];
+      if (url.includes("scaleup.com.br")) {
+        args.push("--referer", "https://stream.scaleup.com.br/");
+        args.push("--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        args.push("--add-header", "Origin:https://stream.scaleup.com.br");
+      }
       if (useCookies) {
         const browser = cookieManager.getBrowser();
         args.push("--cookies-from-browser", browser);
       }
-      const proc = spawn("yt-dlp", args);
+      const ytDlpPath = binaryManager.getBinaryPath("yt-dlp");
+      const proc = spawn(ytDlpPath, args);
       let stdout = "";
       let stderr = "";
       proc.stdout.on("data", (data) => {
@@ -16122,9 +16249,8 @@ class PlaylistAnalyzerService {
    * Analyze playlist and return metadata with all videos
    */
   async analyzePlaylist(url) {
-    const useCookies = cookieManager.shouldUseCookies(url);
     return new Promise((resolve2, reject) => {
-      console.log(`[PlaylistAnalyzer] Analyzing: ${url}${useCookies ? " (with cookies)" : ""}`);
+      console.log(`[PlaylistAnalyzer] Analyzing: ${url}${""}`);
       const args = [
         url,
         "--flat-playlist",
@@ -16133,11 +16259,13 @@ class PlaylistAnalyzerService {
         "--yes-playlist"
         // Enable playlist processing
       ];
-      if (useCookies) {
-        const browser = cookieManager.getBrowser();
-        args.push("--cookies-from-browser", browser);
+      if (url.includes("scaleup.com.br")) {
+        args.push("--referer", "https://stream.scaleup.com.br/");
+        args.push("--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        args.push("--add-header", "Origin:https://stream.scaleup.com.br");
       }
-      const proc = spawn("yt-dlp", args);
+      const ytDlpPath = binaryManager.getBinaryPath("yt-dlp");
+      const proc = spawn(ytDlpPath, args);
       let stdout = "";
       let stderr = "";
       proc.stdout.on("data", (data) => {
@@ -16149,10 +16277,6 @@ class PlaylistAnalyzerService {
       proc.on("close", (code2) => {
         if (code2 !== 0) {
           console.error(`[PlaylistAnalyzer] Error: ${stderr}`);
-          if (cookieManager.isBotError({ message: stderr }) && !useCookies) {
-            cookieManager.recordBlock();
-            console.log("[PlaylistAnalyzer] Bot detected, please retry with cookies");
-          }
           return reject(new Error(`Playlist analysis failed: ${stderr}`));
         }
         try {
@@ -16380,7 +16504,7 @@ class BatchDownloadManager {
     this.engine.cancelTasksByPrefix(`${playlistId}_`);
   }
 }
-createRequire(import.meta.url);
+const require$1 = createRequire(import.meta.url);
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -16418,6 +16542,17 @@ function setupIPCHandlers() {
       throw new Error(e.message);
     }
   });
+  ipcMain$1.handle("get-downloads-folder", () => {
+    return app$1.getPath("downloads");
+  });
+  ipcMain$1.handle("select-directory", async () => {
+    const { dialog: dialog2 } = require$1("electron");
+    const result = await dialog2.showOpenDialog(win, {
+      properties: ["openDirectory"]
+    });
+    if (result.canceled) return null;
+    return result.filePaths[0];
+  });
 }
 function createWindow() {
   win = new BrowserWindow({
@@ -16436,6 +16571,14 @@ function createWindow() {
       console.log("[MAIN] Received start-download with task ID:", task.id);
       engine == null ? void 0 : engine.addTask(task);
     });
+    ipcMain$1.on("cancel-download", (_event, id2) => {
+      engine == null ? void 0 : engine.cancelDownload(id2);
+    });
+    ipcMain$1.on("open-folder", (_event, folderPath) => {
+      if (folderPath) {
+        shell$1.openPath(path.normalize(folderPath));
+      }
+    });
     ipcMain$1.on("start-playlist-download", (_event, playlist) => {
       console.log("[MAIN] Received start-playlist-download:", playlist.metadata.title);
       batchManager == null ? void 0 : batchManager.startPlaylistDownload(playlist);
@@ -16443,6 +16586,16 @@ function createWindow() {
     ipcMain$1.on("cancel-playlist", (_event, playlistId) => {
       console.log("[MAIN] Received cancel-playlist:", playlistId);
       batchManager == null ? void 0 : batchManager.cancelPlaylist(playlistId);
+    });
+    ipcMain$1.on("open-youtube-login", () => {
+      shell$1.openExternal("https://www.youtube.com");
+      cookieManager.recordBlock();
+    });
+    ipcMain$1.on("enable-cookies", () => {
+      cookieManager.recordBlock();
+    });
+    ipcMain$1.on("reset-cookies", () => {
+      cookieManager.resetMemory();
     });
   } else {
     engine = new DownloadEngine(win);
@@ -16458,6 +16611,7 @@ function createWindow() {
 }
 app$1.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
+    cookieManager.clearSessionCookies();
     app$1.quit();
     win = null;
   }
@@ -16467,8 +16621,20 @@ app$1.on("activate", () => {
     createWindow();
   }
 });
-app$1.whenReady().then(() => {
-  logManager.cleanOldLogs();
+app$1.whenReady().then(async () => {
+  try {
+    logManager.cleanOldLogs();
+  } catch (e) {
+    console.error("[MAIN] Failed to clean old logs:", e);
+  }
+  try {
+    const binaries = await binaryManager.validateBinaries();
+    if (!binaries.ytDlp || !binaries.ffmpeg) {
+      console.warn("[MAIN] Warning: Missing essential binaries:", binaries);
+    }
+  } catch (e) {
+    console.error("[MAIN] Binary validation failed:", e);
+  }
   setupIPCHandlers();
   createWindow();
 });

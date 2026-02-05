@@ -37,10 +37,15 @@ electron.contextBridge.exposeInMainWorld("api", {
     electron.ipcRenderer.removeAllListeners(channel);
   },
   selectDirectory: () => electron.ipcRenderer.invoke("select-directory"),
+  getDownloadsFolder: () => electron.ipcRenderer.invoke("get-downloads-folder"),
   pauseDownload: (id) => electron.ipcRenderer.send("pause-download", id),
   resumeDownload: (id) => electron.ipcRenderer.send("resume-download", id),
   cancelDownload: (id) => electron.ipcRenderer.send("cancel-download", id),
   cancelPlaylist: (id) => electron.ipcRenderer.send("cancel-playlist", id),
+  openFolder: (path) => electron.ipcRenderer.send("open-folder", path),
   analyzeUrl: (url) => electron.ipcRenderer.invoke("analyze-url", url),
-  analyzePlaylist: (url) => electron.ipcRenderer.invoke("analyze-playlist", url)
+  analyzePlaylist: (url) => electron.ipcRenderer.invoke("analyze-playlist", url),
+  openYouTubeLogin: () => electron.ipcRenderer.send("open-youtube-login"),
+  enableCookies: () => electron.ipcRenderer.send("enable-cookies"),
+  resetCookies: () => electron.ipcRenderer.send("reset-cookies")
 });

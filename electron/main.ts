@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { DownloadEngine } from './download-engine'
-import { VideoAnalyzerService } from './video-analyzer'
 import { VideoAnalyzerService } from './video-analyzer'
 import { PlaylistAnalyzerService } from './playlist-analyzer'
 import { BatchDownloadManager } from './batch-download-manager'
-import { logManager } from './services/log-manager' // ✅ Initialize logs
+import { logManager } from './services/log-manager'
+import { binaryManager } from './services/binary-manager'
+import { cookieManager } from './services/cookie-manager'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -70,6 +71,19 @@ function setupIPCHandlers() {
       throw new Error(e.message);
     }
   });
+
+  ipcMain.handle('get-downloads-folder', () => {
+    return app.getPath('downloads');
+  });
+
+  ipcMain.handle('select-directory', async () => {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(win!, {
+      properties: ['openDirectory']
+    });
+    if (result.canceled) return null;
+    return result.filePaths[0];
+  });
 }
 
 function createWindow() {
@@ -96,6 +110,16 @@ function createWindow() {
       engine?.addTask(task)
     })
 
+    ipcMain.on('cancel-download', (_event, id) => {
+      engine?.cancelDownload(id)
+    })
+
+    ipcMain.on('open-folder', (_event, folderPath) => {
+      if (folderPath) {
+        shell.openPath(path.normalize(folderPath))
+      }
+    })
+
     // Playlist batch download
     ipcMain.on('start-playlist-download', (_event, playlist) => {
       console.log('[MAIN] Received start-playlist-download:', playlist.metadata.title);
@@ -103,10 +127,24 @@ function createWindow() {
     })
 
     ipcMain.on('cancel-playlist', (_event, playlistId) => {
-      console.log('[MAIN] Received cancel-playlist:', playlistId);
-      batchManager?.cancelPlaylist(playlistId);
-    })
-  } else {
+    console.log('[MAIN] Received cancel-playlist:', playlistId);
+    batchManager?.cancelPlaylist(playlistId);
+  })
+
+  ipcMain.on('open-youtube-login', () => {
+      shell.openExternal('https://www.youtube.com');
+      // Also reset block memory when user explicitly opens login
+      cookieManager.recordBlock(); // This will trigger cookie usage for the next hour
+    });
+
+    ipcMain.on('enable-cookies', () => {
+      cookieManager.recordBlock(); // Force enable cookies for session
+    });
+
+    ipcMain.on('reset-cookies', () => {
+      cookieManager.resetMemory(); // Clear cookie memory
+    });
+} else {
     // Update window reference if recreating
     engine = new DownloadEngine(win)
     if (batchManager) {
@@ -127,10 +165,15 @@ function createWindow() {
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    // Clear session cookies when app closes
+    cookieManager.clearSessionCookies();
+    
     app.quit()
     win = null
   }
 })
+
+
 
 app.on('activate', () => {
   // On OS X it's common to re-create a window in the app when the
@@ -140,9 +183,23 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Clean old logs on startup
-  logManager.cleanOldLogs();
+  try {
+    logManager.cleanOldLogs();
+  } catch (e) {
+    console.error('[MAIN] Failed to clean old logs:', e);
+  }
+
+  // Validate binaries - Don't let this crash the app
+  try {
+    const binaries = await binaryManager.validateBinaries();
+    if (!binaries.ytDlp || !binaries.ffmpeg) {
+      console.warn('[MAIN] Warning: Missing essential binaries:', binaries);
+    }
+  } catch (e) {
+    console.error('[MAIN] Binary validation failed:', e);
+  }
 
   setupIPCHandlers()
   createWindow()

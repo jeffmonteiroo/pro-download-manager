@@ -6,6 +6,7 @@ import { createInterface } from 'node:readline';
 import fs from 'node:fs';
 import { cookieManager } from './services/cookie-manager';
 import { logManager } from './services/log-manager';
+import { binaryManager } from './services/binary-manager';
 
 export interface DownloadTask {
     id: string;
@@ -15,6 +16,7 @@ export interface DownloadTask {
     type: 'smartplayer' | 'standard';
     status?: 'pending' | 'downloading' | 'converting' | 'completed' | 'error' | 'paused';
     progress?: string;
+    error?: string;
     createdAt?: number;
     format?: 'video' | 'audio';
     resolution?: string;
@@ -126,17 +128,25 @@ export class DownloadEngine extends EventEmitter {
     }
 
     private downloadWithFFmpeg(task: DownloadTask) {
-        const outputPath = path.join(task.outputDir, `${task.filename}.mp4`);
-        const args = [
+        const outputPath = path.normalize(path.join(task.outputDir, `${task.filename}.mp4`));
+        const args: string[] = [];
+
+        // Add headers for FFmpeg if Scaleup or similar
+        if (task.url.includes('scaleup.com.br')) {
+            args.push('-headers', 'Referer: https://stream.scaleup.com.br/\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n');
+        }
+
+        args.push(
             '-i', task.url,
             '-c', 'copy',
             '-bsf:a', 'aac_adtstoasc',
             '-y',
             outputPath
-        ];
+        );
 
         console.log(`[FFmpeg] Starting: ${task.url}`);
-        const proc = spawn('ffmpeg', args);
+        const ffmpegPath = binaryManager.getBinaryPath('ffmpeg');
+        const proc = spawn(ffmpegPath, args);
         this.activeDownloads.set(task.id, proc);
 
         let duration: number | null = null;
@@ -170,9 +180,9 @@ export class DownloadEngine extends EventEmitter {
     }
 
     private downloadWithYtDlp(task: DownloadTask) {
-        const outputPathHeader = path.join(task.outputDir, `${task.filename}.%(ext)s`);
+        const outputPathHeader = path.normalize(path.join(task.outputDir, `${task.filename}.%(ext)s`));
         // Use Centralized Log Manager
-        const debugLogPath = logManager.getLogPath(task.id);
+        const debugLogPath = path.normalize(logManager.getLogPath(task.id));
 
         console.log(`[ENGINE] Log path for task ${task.id}: ${debugLogPath}`);
 
@@ -183,7 +193,14 @@ export class DownloadEngine extends EventEmitter {
             '--no-playlist',
         ];
 
-        // Intelligent cookie usage
+        // Add Scaleup specific headers if needed
+        if (task.url.includes('scaleup.com.br')) {
+            args.push('--referer', 'https://stream.scaleup.com.br/');
+            args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            args.push('--add-header', 'Origin:https://stream.scaleup.com.br');
+        }
+
+        // Intelligent cookie usage - ONLY if we detected a block before
         if (cookieManager.shouldUseCookies(task.url)) {
             const browser = cookieManager.getBrowser();
             args.push('--cookies-from-browser', browser);
@@ -197,29 +214,52 @@ export class DownloadEngine extends EventEmitter {
             }
         } else {
             // Video: Reverting to H.264 per user request
-            // "bestvideo+bestaudio" merge to mp4.
-            // Explicitly prefer h264 for compatibility and predictable size
-            if (task.resolution) {
-                const height = task.resolution.replace('p', '');
-                args.push('-S', `res:${height},vcodec:h264,res,acodec:m4a`);
-            } else {
-                args.push('-S', 'vcodec:h264,res,acodec:m4a');
-            }
-            args.push('--merge-output-format', 'mp4');
+        // "bestvideo+bestaudio" merge to mp4.
+        // Explicitly prefer h264 for compatibility and predictable size
+        if (task.resolution) {
+            const height = task.resolution.replace('p', '');
+            args.push('-S', `res:${height},vcodec:h264,res,acodec:m4a`);
+        } else {
+            args.push('-S', 'vcodec:h264,res,acodec:m4a');
+        }
+        args.push('--merge-output-format', 'mp4');
+    }
+
+        // Workaround for YouTube SABR / Forbidden
+        if (task.url.includes('youtube.com') || task.url.includes('youtu.be')) {
+            // Modern extractor args for YouTube to avoid SABR where possible
+            args.push('--extractor-args', 'youtube:player_client=web,mweb,tv,ios;player_skip=configs,web_safari');
+            // Enable remote components to solve JS challenges (n-challenge) via deno
+            args.push('--remote-components', 'ejs:github');
         }
 
-        console.log(`[yt-dlp] Starting: ${task.url}`);
+    console.log(`[yt-dlp] Starting: ${task.url}`);
+        const ytDlpPath = binaryManager.getBinaryPath('yt-dlp');
 
         // Write header to log
-        fs.writeFileSync(debugLogPath, `Command: yt-dlp ${args.join(' ')}\n\n`);
+        fs.writeFileSync(debugLogPath, `Command: ${ytDlpPath} ${args.join(' ')}\n\n`);
 
-        const proc = spawn('yt-dlp', args);
+        const proc = spawn(ytDlpPath, args);
         this.activeDownloads.set(task.id, proc);
 
         // Standard Error Handler
         proc.stderr.on('data', (data) => {
             const s = data.toString();
             fs.appendFileSync(debugLogPath, `[STDERR] ${s}`); // Log to file
+
+            // Auto-detect YouTube block
+            if (s.toLowerCase().includes('http error 403') || s.toLowerCase().includes('sign in')) {
+                if (task.url.includes('youtube.com') || task.url.includes('youtu.be')) {
+                    console.log(`[ENGINE] YouTube block detected for task ${task.id}, recording in CookieManager`);
+                    cookieManager.recordBlock();
+                    
+                    new Notification({
+                        title: 'YouTube Bloqueou o Download',
+                        body: 'O YouTube exige login ou verificação de bot. Clique em "Login" no card de download.',
+                    }).show();
+                }
+            }
+
             if (s.includes('frame=') || s.includes('time=')) {
                 this.updateTaskProgress(task.id, 'Converting', undefined, undefined, undefined, 'converting');
             }
@@ -238,6 +278,15 @@ export class DownloadEngine extends EventEmitter {
 
             if (!line.trim()) return;
             fs.appendFileSync(debugLogPath, `[STDOUT] ${line}\n`); // Log to file
+
+            const s = line.toLowerCase();
+            // Auto-detect YouTube block in stdout as well
+            if (s.includes('http error 403') || s.includes('sign in') || s.includes('js challenges')) {
+                if (task.url.includes('youtube.com') || task.url.includes('youtu.be')) {
+                    console.log(`[ENGINE] YouTube block/challenge detected in stdout for task ${task.id}, recording in CookieManager`);
+                    cookieManager.recordBlock();
+                }
+            }
 
             // Detect conversion
             if (line.includes('[ffmpeg]') || line.includes('[Merger]')) {
@@ -322,23 +371,48 @@ export class DownloadEngine extends EventEmitter {
                 this.emit('download-complete', { id: task.id, path: finalPath }); // Internal event
 
                 new Notification({
-                    title: 'Download Completed',
-                    body: `${task.filename} has finished downloading.`,
+                    title: 'Download Concluído',
+                    body: `${task.filename} foi baixado com sucesso.`,
                 }).show();
             } else {
                 task.status = 'error';
-                const errorDetails = getErrorLog ? getErrorLog() : '';
-                const shortError = errorDetails.split('\n').slice(-3).join(' ') || `Code ${code}`; // Get last 3 lines
+                const errorLog = getErrorLog ? getErrorLog() : '';
+                
+                // Detailed error detection
+                let userFriendlyError = 'O download falhou devido a um erro técnico inesperado.';
+                const lowerError = errorLog.toLowerCase();
+                
+                // FORCE login message if it's a YouTube URL and we have any failure that looks like a block
+                const isYouTube = task.url.includes('youtube.com') || task.url.includes('youtu.be');
 
-                console.error(`Download failed [${task.id}]:`, errorDetails);
+                // CRITICAL: Precise and short error messages in Portuguese
+                if (lowerError.includes('403') || lowerError.includes('forbidden') || lowerError.includes('sign in') || lowerError.includes('login') || lowerError.includes('confirm your age')) {
+                    userFriendlyError = 'ACESSO NEGADO: O YouTube exige login ou cookies para este vídeo.';
+                } else if (lowerError.includes('format is not available') || lowerError.includes('only images are available')) {
+                    userFriendlyError = 'RESTRIÇÃO DE CONTA: O YouTube bloqueou o download com seus cookies. Tente SEM cookies.';
+                    // If this happens, we should probably record that cookies are actually HURTING
+                    cookieManager.resetMemory(); 
+                } else if (lowerError.includes('n challenge') || lowerError.includes('js challenge') || lowerError.includes('captcha') || lowerError.includes('robot')) {
+                    userFriendlyError = 'VERIFICAÇÃO: Detecção de robô (Captcha) no YouTube.';
+                } else if (isYouTube) {
+                    userFriendlyError = 'ERRO NO YOUTUBE: Falha ao acessar o conteúdo.';
+                } else if (lowerError.includes('format is not available')) {
+                    userFriendlyError = 'INDISPONÍVEL: Formato não disponível.';
+                } else if (lowerError.includes('no such file') || lowerError.includes('permission denied')) {
+                    userFriendlyError = 'ERRO DE ARQUIVO: Sem permissão para salvar.';
+                } else if (lowerError.includes('not found') || lowerError.includes('404')) {
+                    userFriendlyError = 'NÃO ENCONTRADO: Link inválido ou removido.';
+                }
 
-                this.win.webContents.send('download-error', { id: task.id, error: shortError });
-                this.emit('download-error', { id: task.id, error: shortError }); // Internal event
+                task.error = userFriendlyError;
 
-                new Notification({
-                    title: 'Download Failed',
-                    body: `Error downloading ${task.filename}. Check app for details.`,
-                }).show();
+                this.win.webContents.send('download-error', { 
+                    id: task.id, 
+                    error: userFriendlyError,
+                    details: errorLog 
+                });
+                
+                this.emit('download-error', { id: task.id, error: userFriendlyError });
             }
             this.saveToStore();
             this.processQueue(); // Start next if any

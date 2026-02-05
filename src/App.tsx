@@ -11,8 +11,7 @@ import type { PlaylistMetadata, VideoInPlaylist } from './store/playlistStore'
 
 function App() {
   const [url, setUrl] = useState('')
-  const { downloads, addDownload, updateDownload, setDownloads, removeDownload } = useDownloadStore()
-  const [isProcessing, setIsProcessing] = useState(false)
+  const { downloads, addDownload, updateDownload, removeDownload } = useDownloadStore()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   // Modal State
@@ -26,6 +25,11 @@ function App() {
   const { playlists, addPlaylist, removePlaylist, updateVideoByTaskId } = usePlaylistStore()
 
   useEffect(() => {
+    if (!window.api) {
+      console.warn('Electron API (window.api) not found. If you are running in a browser, some features will not work.');
+      return;
+    }
+
     // Setup listeners
     window.api.onProgress((data) => {
       // console.log('[App] Progress:', data.id, data.progress); // Verify events are arriving
@@ -95,10 +99,12 @@ function App() {
     })
 
     return () => {
-      window.api.removeListener('download-progress')
-      window.api.removeListener('download-complete')
-      window.api.removeListener('download-error')
-      window.api.removeListener?.('download-removed')
+      if (window.api) {
+        window.api.removeListener?.('download-progress')
+        window.api.removeListener?.('download-complete')
+        window.api.removeListener?.('download-error')
+        window.api.removeListener?.('download-removed')
+      }
     }
   }, [updateDownload, removeDownload, updateVideoByTaskId])
 
@@ -111,11 +117,12 @@ function App() {
     try {
       // Check if URL is a playlist
       // Expanded detection for SoundCloud sets/profiles and other platforms
-      const isPlaylist = url.includes('list=') ||
+      const isPlaylist = (url.includes('list=') ||
         url.includes('/playlist') ||
         url.includes('/sets/') ||
         url.includes('/albums/') ||
-        (url.includes('soundcloud.com/') && url.split('/').length > 3); // Crude heuristic for profile/set
+        (url.includes('soundcloud.com/') && url.split('/').length > 3)) && 
+        !url.includes('scaleup.com.br'); // Scaleup player URLs with /playlists/ are usually better handled as single videos or custom scrapers
 
       console.log(`[App] Inspecting URL: ${url}, isPlaylist=${isPlaylist}`);
 
@@ -136,16 +143,11 @@ function App() {
     } catch (error: any) {
       console.error('Analysis failed:', error);
 
-      // Friendly error messages
+      // REMOVED automatic login prompt during analysis to prevent early login requests
+      // The error will be shown in the download phase if it actually fails there
+      
       let userMessage = '';
-      if (error.message.includes('authentication') || error.message.includes('cookies') || error.message.includes('bot')) {
-        userMessage = '🔒 YouTube está bloqueando downloads temporariamente.\n\n' +
-          '💡 Soluções:\n' +
-          '• Aguarde 10-15 minutos e tente novamente\n' +
-          '• Teste com outro vídeo do YouTube\n' +
-          '• Use vídeos de outras plataformas (Vimeo, Dailymotion)\n\n' +
-          'Estamos trabalhando em uma solução permanente!';
-      } else if (error.message.includes('No title')) {
+      if (error.message.includes('No title')) {
         userMessage = '❌ Não foi possível analisar este vídeo.\n\n' +
           'O vídeo pode estar:\n' +
           '• Privado ou restrito\n' +
@@ -225,6 +227,26 @@ function App() {
     if (window.confirm(confirmMsg)) {
       window.api.cancelDownload(id)
     }
+  }
+
+  const handleOpenFolder = (path: string) => {
+    window.api.openFolder(path);
+  }
+
+  const handleLogin = () => {
+    window.api?.openYouTubeLogin();
+  }
+
+  const handleRetry = (item: any) => {
+    window.api?.startDownload({
+      id: item.id,
+      url: item.url,
+      filename: item.filename,
+      outputDir: item.outputDir,
+      format: item.format,
+      resolution: item.resolution
+    })
+    updateDownload(item.id, { status: 'pending', error: undefined, progress: '0' })
   }
 
   return (
@@ -312,6 +334,9 @@ function App() {
             onPause={handlePause}
             onResume={handleResume}
             onCancel={handleCancel}
+            onOpenFolder={handleOpenFolder}
+            onLogin={handleLogin}
+            onRetry={handleRetry}
           />
         ))}
       </div>

@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { cookieManager } from './services/cookie-manager';
+import { binaryManager } from './services/binary-manager';
 import { PlaylistMetadata, VideoInPlaylist } from './types/playlist';
 
 export class PlaylistAnalyzerService {
@@ -17,7 +18,8 @@ export class PlaylistAnalyzerService {
      * Analyze playlist and return metadata with all videos
      */
     async analyzePlaylist(url: string): Promise<PlaylistMetadata> {
-        const useCookies = cookieManager.shouldUseCookies(url);
+        // We DISABLED automatic cookie usage during analysis to avoid macOS Keychain prompts.
+        const useCookies = false;
 
         return new Promise((resolve, reject) => {
             console.log(`[PlaylistAnalyzer] Analyzing: ${url}${useCookies ? ' (with cookies)' : ''}`);
@@ -29,12 +31,20 @@ export class PlaylistAnalyzerService {
                 '--yes-playlist',       // Enable playlist processing
             ];
 
+            // Add Scaleup specific headers if needed
+            if (url.includes('scaleup.com.br')) {
+                args.push('--referer', 'https://stream.scaleup.com.br/');
+                args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+                args.push('--add-header', 'Origin:https://stream.scaleup.com.br');
+            }
+
             if (useCookies) {
                 const browser = cookieManager.getBrowser();
                 args.push('--cookies-from-browser', browser);
             }
 
-            const proc = spawn('yt-dlp', args);
+            const ytDlpPath = binaryManager.getBinaryPath('yt-dlp');
+            const proc = spawn(ytDlpPath, args);
             let stdout = '';
             let stderr = '';
 
@@ -49,13 +59,6 @@ export class PlaylistAnalyzerService {
             proc.on('close', (code) => {
                 if (code !== 0) {
                     console.error(`[PlaylistAnalyzer] Error: ${stderr}`);
-
-                    // Check for bot error
-                    if (cookieManager.isBotError({ message: stderr }) && !useCookies) {
-                        cookieManager.recordBlock();
-                        console.log('[PlaylistAnalyzer] Bot detected, please retry with cookies');
-                    }
-
                     return reject(new Error(`Playlist analysis failed: ${stderr}`));
                 }
 
